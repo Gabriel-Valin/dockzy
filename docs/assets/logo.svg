@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>dockzy</title>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#161b22"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <linearGradient id="whale" gradientUnits="userSpaceOnUse" x1="40" y1="190" x2="434" y2="350">
+      <stop offset="0" stop-color="#58a6ff"/>
+      <stop offset="1" stop-color="#1f6feb"/>
+    </linearGradient>
+  </defs>
+
+  <!-- app-icon background -->
+  <rect x="0" y="0" width="512" height="512" rx="104" fill="url(#bg)"/>
+  <rect x="4" y="4" width="504" height="504" rx="100" fill="none" stroke="#30363d" stroke-width="2"/>
+
+  <!-- terminal window chrome -->
+  <circle cx="72" cy="76" r="9" fill="#ff5f56"/>
+  <circle cx="100" cy="76" r="9" fill="#ffbd2e"/>
+  <circle cx="128" cy="76" r="9" fill="#27c93f"/>
+  <line x1="60" y1="104" x2="452" y2="104" stroke="#21262d" stroke-width="2"/>
+
+  <!-- whale silhouette (docker container carrier, swimming right) -->
+  <g>
+    <!-- tail flukes -->
+    <path d="M 96 300
+             L 44 254
+             L 84 298
+             L 40 336
+             L 92 320
+             Z"
+          fill="url(#whale)"/>
+
+    <!-- body -->
+    <path d="M 88 300
+             C 84 240 150 202 232 196
+             C 310 190 372 206 404 236
+             C 424 254 430 270 420 284
+             C 434 292 436 306 422 316
+             C 408 328 386 328 372 318
+             C 356 336 320 348 272 350
+             C 200 354 128 340 100 320
+             C 92 314 88 308 88 300 Z"
+          fill="url(#whale)"/>
+
+    <!-- belly highlight -->
+    <path d="M 118 312
+             C 158 336 226 344 280 338
+             C 236 348 168 344 128 322
+             C 122 318 118 315 118 312 Z"
+          fill="#8ec9ff" opacity="0.35"/>
+
+    <!-- eye -->
+    <circle cx="360" cy="240" r="7" fill="#0d1117"/>
+
+    <!-- containers stacked on the back -->
+    <g stroke="#0d1117" stroke-width="3">
+      <rect x="188" y="150" width="52" height="38" rx="4" fill="#3fb950" transform="rotate(-4 214 169)"/>
+      <rect x="244" y="146" width="52" height="38" rx="4" fill="#58a6ff" transform="rotate(3 270 165)"/>
+      <rect x="300" y="152" width="46" height="34" rx="4" fill="#f0883e" transform="rotate(-2 323 169)"/>
+    </g>
+
+    <!-- blowhole cursor: a terminal caret "typed" above the containers -->
+    <rect x="330" y="112" width="14" height="26" rx="2" fill="#3fb950"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="256" y="432" text-anchor="middle"
+        font-family="'SF Mono','Menlo','Courier New',monospace"
+        font-size="56" font-weight="700" fill="#e6edf3">dockzy</text>
+  <text x="256" y="464" text-anchor="middle"
+        font-family="'SF Mono','Menlo','Courier New',monospace"
+        font-size="18" fill="#3fb950">$ dockzy --watch</text>
+</svg>
