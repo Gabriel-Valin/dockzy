@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -14,6 +15,13 @@ import (
 type CPUUpdate struct {
 	ID  string
 	CPU string
+}
+
+// StatsUpdate carrega o texto de stats (CPU, memória, rede, disco, PIDs) já
+// formatado pra exibição na aba Stats.
+type StatsUpdate struct {
+	ID   string
+	Text string
 }
 
 // StreamCPU assina o stream de stats do container e manda um CPUUpdate a
@@ -36,6 +44,33 @@ func (c *Client) StreamCPU(ctx context.Context, id string, updates chan<- CPUUpd
 
 		select {
 		case updates <- CPUUpdate{ID: id, CPU: formatCPUPercent(stats)}:
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// StreamStats assina o stream de stats do container e manda um StatsUpdate
+// formatado a cada amostra recebida (o daemon manda uma por segundo).
+// Encerra quando ctx é cancelado ou o stream fecha. Feito pra rodar numa
+// goroutine própria, atrelada à seleção atual no painel esquerdo — troca de
+// seleção cancela o ctx e encerra o stream anterior.
+func (c *Client) StreamStats(ctx context.Context, id string, updates chan<- StatsUpdate) {
+	result, err := c.ContainerStats(ctx, id, client.ContainerStatsOptions{Stream: true})
+	if err != nil {
+		return
+	}
+	defer result.Body.Close()
+
+	decoder := json.NewDecoder(result.Body)
+	for {
+		var stats container.StatsResponse
+		if err := decoder.Decode(&stats); err != nil {
+			return
+		}
+
+		select {
+		case updates <- StatsUpdate{ID: id, Text: formatStatsText(stats)}:
 		case <-ctx.Done():
 			return
 		}
@@ -71,4 +106,35 @@ func formatCPUPercent(stats container.StatsResponse) string {
 	}
 
 	return fmt.Sprintf("%.2f%%", (cpuDelta/systemDelta)*onlineCPUs*100.0)
+}
+
+// formatStatsText formata uma amostra de stats como no "docker stats" — CPU,
+// memória, rede, disco e PIDs. Usada tanto pelo snapshot estático (info.go,
+// primeira renderização da aba Stats) quanto por StreamStats (atualização a
+// cada segundo).
+func formatStatsText(stats container.StatsResponse) string {
+	var rxBytes, txBytes uint64
+	for _, net := range stats.Networks {
+		rxBytes += net.RxBytes
+		txBytes += net.TxBytes
+	}
+
+	var readBytes, writeBytes uint64
+	for _, entry := range stats.BlkioStats.IoServiceBytesRecursive {
+		switch strings.ToLower(entry.Op) {
+		case "read":
+			readBytes += entry.Value
+		case "write":
+			writeBytes += entry.Value
+		}
+	}
+
+	return fmt.Sprintf(
+		"CPU:    %s\nMemory: %s / %s\nNet I/O: %s / %s\nBlock I/O: %s / %s\nPIDs: %d\n",
+		formatCPUPercent(stats),
+		formatBytes(stats.MemoryStats.Usage), formatBytes(stats.MemoryStats.Limit),
+		formatBytes(rxBytes), formatBytes(txBytes),
+		formatBytes(readBytes), formatBytes(writeBytes),
+		stats.PidsStats.Current,
+	)
 }

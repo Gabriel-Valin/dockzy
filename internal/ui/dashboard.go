@@ -20,14 +20,16 @@ type liveRow struct {
 type Dashboard struct {
 	App *tview.Application
 
-	root *tview.Flex
-	tabs *tabbedPanel
-	rows map[string]*liveRow
+	root   *tview.Flex
+	detail *detailPanel
+	rows   map[string]*liveRow
 
 	focusables []tview.Primitive
 	focusIdx   int
 
 	onSelectContainer func(id string)
+	onSelectImage     func(id string)
+	onSelectVolume    func(name string)
 }
 
 // New monta o dashboard a partir dos dados iniciais. onQuit é chamado antes
@@ -62,21 +64,21 @@ func New(data Data, onQuit func()) *Dashboard {
 		rows[s.ID] = &liveRow{list: standaloneBox, index: i, state: s.State, name: s.Name}
 	}
 
-	// --- Painel direito: abas ---
-	tabs := newTabbedPanel(data)
+	// --- Painel direito: abas de container, ou Config de imagem/volume ---
+	detail := newDetailPanel(data)
 
 	// --- Layout raiz: esquerda (peso 1) + direita (peso 2) ---
 	rootFlex := tview.NewFlex().
 		AddItem(leftPanel, 0, 1, true).
-		AddItem(tabs.root, 0, 2, false)
+		AddItem(detail.root, 0, 2, false)
 
 	d := &Dashboard{
-		App:  app,
-		root: rootFlex,
-		tabs: tabs,
-		rows: rows,
+		App:    app,
+		root:   rootFlex,
+		detail: detail,
+		rows:   rows,
 		focusables: []tview.Primitive{
-			servicesBox, standaloneBox, imagesBox, volumesBox, tabs.root,
+			servicesBox, standaloneBox, imagesBox, volumesBox, detail.root,
 		},
 	}
 
@@ -85,13 +87,12 @@ func New(data Data, onQuit func()) *Dashboard {
 		box.SetFocusFunc(func() { box.SetBorderColor(colorFocused) })
 		box.SetBlurFunc(func() { box.SetBorderColor(colorUnfocused) })
 	}
-	applyFocusBorder(imagesBox.Box)
-	applyFocusBorder(volumesBox.Box)
-	applyFocusBorder(tabs.root.Box)
+	applyFocusBorder(detail.root.Box)
 
-	// Services e Standalone também disparam d.onSelectContainer: ao navegar
-	// (SetChangedFunc) e ao ganhar foco (pra atualizar o painel direito
-	// mesmo se o item em destaque não mudou de índice).
+	// Services, Standalone, Images e Volumes disparam sua respectiva
+	// onSelect*: ao navegar (SetChangedFunc) e ao ganhar foco (pra
+	// atualizar o painel direito mesmo se o item em destaque não mudou de
+	// índice).
 	selectServices := func() {
 		if d.onSelectContainer == nil || len(data.Services) == 0 {
 			return
@@ -108,12 +109,34 @@ func New(data Data, onQuit func()) *Dashboard {
 			d.onSelectContainer(data.Standalone[idx].ID)
 		}
 	}
+	selectImages := func() {
+		if d.onSelectImage == nil || len(data.Images) == 0 {
+			return
+		}
+		if idx := imagesBox.GetCurrentItem(); idx >= 0 && idx < len(data.Images) {
+			d.onSelectImage(data.Images[idx].ID)
+		}
+	}
+	selectVolumes := func() {
+		if d.onSelectVolume == nil || len(data.Volumes) == 0 {
+			return
+		}
+		if idx := volumesBox.GetCurrentItem(); idx >= 0 && idx < len(data.Volumes) {
+			d.onSelectVolume(data.Volumes[idx].Name)
+		}
+	}
 
 	servicesBox.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
 		selectServices()
 	})
 	standaloneBox.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
 		selectStandalone()
+	})
+	imagesBox.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
+		selectImages()
+	})
+	volumesBox.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
+		selectVolumes()
 	})
 
 	servicesBox.SetFocusFunc(func() {
@@ -127,6 +150,18 @@ func New(data Data, onQuit func()) *Dashboard {
 		selectStandalone()
 	})
 	standaloneBox.SetBlurFunc(func() { standaloneBox.SetBorderColor(colorUnfocused) })
+
+	imagesBox.SetFocusFunc(func() {
+		imagesBox.SetBorderColor(colorFocused)
+		selectImages()
+	})
+	imagesBox.SetBlurFunc(func() { imagesBox.SetBorderColor(colorUnfocused) })
+
+	volumesBox.SetFocusFunc(func() {
+		volumesBox.SetBorderColor(colorFocused)
+		selectVolumes()
+	})
+	volumesBox.SetBlurFunc(func() { volumesBox.SetBorderColor(colorUnfocused) })
 
 	// Índice do painel de abas em focusables, pra saber quando as setas
 	// devem trocar de aba em vez de navegar dentro de uma lista.
@@ -150,10 +185,10 @@ func New(data Data, onQuit func()) *Dashboard {
 		if d.focusIdx == tabsFocusIdx {
 			switch event.Key() {
 			case tcell.KeyLeft:
-				tabs.prev()
+				detail.prevTab()
 				return nil
 			case tcell.KeyRight:
-				tabs.next()
+				detail.nextTab()
 				return nil
 			}
 		}
@@ -183,6 +218,19 @@ func (d *Dashboard) OnSelectContainer(fn func(id string)) {
 	d.onSelectContainer = fn
 }
 
+// OnSelectImage registra fn pra ser chamada com o ID da imagem em destaque
+// sempre que a seleção mudar em Images. Deve ser chamado antes de Run.
+func (d *Dashboard) OnSelectImage(fn func(id string)) {
+	d.onSelectImage = fn
+}
+
+// OnSelectVolume registra fn pra ser chamada com o nome do volume em
+// destaque sempre que a seleção mudar em Volumes. Deve ser chamado antes de
+// Run.
+func (d *Dashboard) OnSelectVolume(fn func(name string)) {
+	d.onSelectVolume = fn
+}
+
 // RunningContainerIDs devolve os IDs dos containers que estão rodando —
 // os únicos candidatos a stream de CPU.
 func (d *Dashboard) RunningContainerIDs() []string {
@@ -208,12 +256,32 @@ func (d *Dashboard) UpdateCPU(id, cpu string) {
 	})
 }
 
-// SetContainerInfo atualiza o conteúdo das quatro abas do painel direito
-// (Logs, Stats, Container Config, Top). Seguro pra chamar de qualquer
-// goroutine.
+// SetContainerInfo troca o painel direito pro modo de 4 abas (Logs, Stats,
+// Container Config, Top) e atualiza seu conteúdo. Chamado ao selecionar um
+// Service ou Standalone. Seguro pra chamar de qualquer goroutine.
 func (d *Dashboard) SetContainerInfo(logs, stats, config, top string) {
 	d.App.QueueUpdateDraw(func() {
-		d.tabs.setContent(logs, stats, config, top)
+		d.detail.showContainer(logs, stats, config, top)
+	})
+}
+
+// UpdateStats reescreve só a aba Stats do painel de container (CPU,
+// memória, rede, disco, PIDs), sem mexer em Logs/Config/Top. Chamado a cada
+// amostra do stream de stats do container selecionado. Seguro pra chamar
+// de qualquer goroutine.
+func (d *Dashboard) UpdateStats(text string) {
+	d.App.QueueUpdateDraw(func() {
+		d.detail.updateStats(text)
+	})
+}
+
+// SetResourceInfo troca o painel direito pro modo simples de Config (sem
+// Logs/Stats/Top) e mostra text. Chamado ao selecionar uma Image ou um
+// Volume, que não têm logs, stats ao vivo nem processos "top". Seguro pra
+// chamar de qualquer goroutine.
+func (d *Dashboard) SetResourceInfo(text string) {
+	d.App.QueueUpdateDraw(func() {
+		d.detail.showResource(text)
 	})
 }
 

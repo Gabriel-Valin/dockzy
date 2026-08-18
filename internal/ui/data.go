@@ -2,11 +2,11 @@ package ui
 
 import "github.com/Gabriel-Valin/dockzy/internal/docker"
 
-// Data reúne tudo que o Dashboard precisa desenhar. Services e Standalone
-// costumam vir da API real do Docker; Images e Volumes ainda são mockados
-// (ver internal/docker.MockImages/MockVolumes). Logs/Stats/Config/Top
-// começam com um placeholder e são preenchidos por container conforme a
-// seleção muda (ver Dashboard.OnSelectContainer / SetContainerInfo).
+// Data reúne tudo que o Dashboard precisa desenhar. Services, Standalone,
+// Images e Volumes vêm da API real do Docker (ver internal/docker.Client).
+// Logs/Stats/Config/Top começam com um placeholder e são preenchidos por
+// container conforme a seleção muda (ver Dashboard.OnSelectContainer /
+// SetContainerInfo).
 type Data struct {
 	StatusTitle string
 	Services    []docker.Service

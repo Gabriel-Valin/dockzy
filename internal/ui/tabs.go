@@ -110,3 +110,10 @@ func (tp *tabbedPanel) setContent(logs, stats, config, top string) {
 	tp.configView.SetText(config)
 	tp.topView.SetText(top)
 }
+
+// setStats troca só o texto da aba Stats. Usado a cada amostra do stream de
+// stats do container selecionado (~1x por segundo) — não mexe em
+// Logs/Config/Top, que não mudam nesse ritmo.
+func (tp *tabbedPanel) setStats(stats string) {
+	tp.statsView.SetText(stats)
+}

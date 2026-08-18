@@ -89,4 +89,6 @@ lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 This is a personal, early-stage project — issues and PRs are welcome, but
 expect the internals to shift. Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 first; it documents the exact shape a new feature (static or streamed) is
-expected to take.
+expected to take. New to Go concurrency patterns? [`docs/GOLANG-ROADMAP.md`](docs/GOLANG-ROADMAP.md)
+walks through every Go concept used in this codebase (goroutines,
+channels, context, embedding...) with file:line references.

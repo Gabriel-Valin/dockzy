@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -47,6 +48,7 @@ func stateColor(state string) string {
 func buildServicesBox(data Data) *tview.List {
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetBorder(true).SetTitle(" Services ").SetTitleAlign(tview.AlignLeft)
+	applySelectedStyle(list)
 
 	for _, s := range data.Services {
 		row := formatRow(s.State, s.Name, s.CPU, stateColor(s.State))
@@ -58,6 +60,7 @@ func buildServicesBox(data Data) *tview.List {
 func buildStandaloneBox(data Data) *tview.List {
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetBorder(true).SetTitle(" Standalone Containers ").SetTitleAlign(tview.AlignLeft)
+	applySelectedStyle(list)
 
 	for _, s := range data.Standalone {
 		row := formatRow(s.State, s.Name, s.CPU, stateColor(s.State))
@@ -69,6 +72,7 @@ func buildStandaloneBox(data Data) *tview.List {
 func buildImagesBox(data Data) *tview.List {
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetBorder(true).SetTitle(" Images ").SetTitleAlign(tview.AlignLeft)
+	applySelectedStyle(list)
 
 	for _, img := range data.Images {
 		// repo (col ~18) + tag (col ~14) + size à direita
@@ -83,12 +87,23 @@ func buildImagesBox(data Data) *tview.List {
 func buildVolumesBox(data Data) *tview.List {
 	list := tview.NewList().ShowSecondaryText(false)
 	list.SetBorder(true).SetTitle(" Volumes ").SetTitleAlign(tview.AlignLeft)
+	applySelectedStyle(list)
 
 	for _, v := range data.Volumes {
 		row := fmt.Sprintf("%s %s", padRight(v.Driver, 6), v.Name)
 		list.AddItem(row, "", 0, nil)
 	}
 	return list
+}
+
+// applySelectedStyle troca o destaque padrão do tview.List (que inverte
+// fundo/texto) por negrito puro, sem fundo colorido — pra não competir com
+// as cores de estado (verde/vermelho) que formatRow já embute na linha.
+func applySelectedStyle(list *tview.List) {
+	list.SetSelectedStyle(tcell.StyleDefault.
+		Foreground(tview.Styles.PrimaryTextColor).
+		Background(tview.Styles.PrimitiveBackgroundColor).
+		Bold(true))
 }
 
 func padRight(s string, width int) string {

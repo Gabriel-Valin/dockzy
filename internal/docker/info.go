@@ -109,30 +109,7 @@ func (c *Client) containerStatsSnapshot(ctx context.Context, id string) (string,
 		return "", err
 	}
 
-	var rxBytes, txBytes uint64
-	for _, net := range stats.Networks {
-		rxBytes += net.RxBytes
-		txBytes += net.TxBytes
-	}
-
-	var readBytes, writeBytes uint64
-	for _, entry := range stats.BlkioStats.IoServiceBytesRecursive {
-		switch strings.ToLower(entry.Op) {
-		case "read":
-			readBytes += entry.Value
-		case "write":
-			writeBytes += entry.Value
-		}
-	}
-
-	return fmt.Sprintf(
-		"CPU:    %s\nMemory: %s / %s\nNet I/O: %s / %s\nBlock I/O: %s / %s\nPIDs: %d\n",
-		formatCPUPercent(stats),
-		formatBytes(stats.MemoryStats.Usage), formatBytes(stats.MemoryStats.Limit),
-		formatBytes(rxBytes), formatBytes(txBytes),
-		formatBytes(readBytes), formatBytes(writeBytes),
-		stats.PidsStats.Current,
-	), nil
+	return formatStatsText(stats), nil
 }
 
 // containerConfig busca o inspect do container e formata imagem, comando,
