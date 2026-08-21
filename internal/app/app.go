@@ -5,6 +5,9 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/Gabriel-Valin/dockzy/internal/docker"
@@ -12,8 +15,10 @@ import (
 )
 
 // Run inicializa o cliente Docker, monta o dashboard e roda a aplicação até
-// o usuário sair ('q').
-func Run() error {
+// o usuário sair ('q'). Se all for true, ignora qualquer projeto
+// docker-compose detectado na pasta atual e carrega tudo do host — igual
+// ao comportamento de quando nenhum projeto é detectado.
+func Run(all bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -23,24 +28,43 @@ func Run() error {
 	}
 	defer cli.Close()
 
-	services, standalone, err := cli.ListContainers(ctx)
+	project, scoped, err := detectProject(ctx, cli, all)
 	if err != nil {
 		return err
 	}
 
-	images, err := cli.ListImages(ctx)
-	if err != nil {
-		return err
-	}
+	statusTitle := "lazydocker"
+	var services []docker.Service
+	var standalone []docker.Standalone
+	var images []docker.Image
+	var volumes []docker.Volume
 
-	volumes, err := cli.ListVolumes(ctx)
-	if err != nil {
-		return err
+	if scoped {
+		if services, err = cli.ListProjectContainers(ctx, project.Name); err != nil {
+			return err
+		}
+		if images, err = cli.ListProjectImages(ctx, project.Name); err != nil {
+			return err
+		}
+		if volumes, err = cli.ListProjectVolumes(ctx, project.Name); err != nil {
+			return err
+		}
+		statusTitle = formatProjectStatus(project.Name, services)
+	} else {
+		if services, standalone, err = cli.ListContainers(ctx); err != nil {
+			return err
+		}
+		if images, err = cli.ListImages(ctx); err != nil {
+			return err
+		}
+		if volumes, err = cli.ListVolumes(ctx); err != nil {
+			return err
+		}
 	}
 
 	const loading = "carregando...\n"
 	data := ui.Data{
-		StatusTitle: "lazydocker",
+		StatusTitle: statusTitle,
 		Services:    services,
 		Standalone:  standalone,
 		Images:      images,
@@ -158,4 +182,30 @@ func Run() error {
 	}
 
 	return dashboard.Run()
+}
+
+// detectProject decide se a sessão atual deve ser escopada a um projeto
+// docker-compose. Se all for true, nunca escopa (usuário pediu
+// explicitamente pra ver tudo). Senão, tenta detectar um projeto a partir
+// da pasta de onde o dockzy foi chamado.
+func detectProject(ctx context.Context, cli *docker.Client, all bool) (docker.Project, bool, error) {
+	if all {
+		return docker.Project{}, false, nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return docker.Project{}, false, err
+	}
+	return cli.DetectProject(ctx, cwd)
+}
+
+// formatProjectStatus monta o texto do painel Status quando a sessão está
+// escopada a um projeto docker-compose: nome do projeto e os nomes dos
+// serviços relacionados, igual ao lazydocker.
+func formatProjectStatus(project string, services []docker.Service) string {
+	names := make([]string, len(services))
+	for i, s := range services {
+		names[i] = s.Name
+	}
+	return fmt.Sprintf("%s\nServices: %s", project, strings.Join(names, ", "))
 }

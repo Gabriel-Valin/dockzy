@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/api/types/volume"
 	"github.com/moby/moby/client"
 )
 
@@ -35,22 +37,30 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 
 	var images []Image
 	for _, summary := range result.Items {
-		id := strings.TrimPrefix(summary.ID, "sha256:")
-		if len(id) > 12 {
-			id = id[:12]
-		}
-		size := formatBytes(uint64(summary.Size))
-
-		if len(summary.RepoTags) == 0 {
-			images = append(images, Image{Repo: "<none>", Tag: "<none>", Size: size, ID: id})
-			continue
-		}
-		for _, repoTag := range summary.RepoTags {
-			repo, tag := splitRepoTag(repoTag)
-			images = append(images, Image{Repo: repo, Tag: tag, Size: size, ID: id})
-		}
+		images = append(images, imagesFromSummary(summary)...)
 	}
 	return images, nil
+}
+
+// imagesFromSummary converte um [image.Summary] (uma imagem) em uma ou
+// mais [Image] — uma por tag, já que "docker images" mostra uma linha por
+// tag, não por imagem. Compartilhada por ListImages e ListProjectImages.
+func imagesFromSummary(summary image.Summary) []Image {
+	id := strings.TrimPrefix(summary.ID, "sha256:")
+	if len(id) > 12 {
+		id = id[:12]
+	}
+	size := formatBytes(uint64(summary.Size))
+
+	if len(summary.RepoTags) == 0 {
+		return []Image{{Repo: "<none>", Tag: "<none>", Size: size, ID: id}}
+	}
+	images := make([]Image, 0, len(summary.RepoTags))
+	for _, repoTag := range summary.RepoTags {
+		repo, tag := splitRepoTag(repoTag)
+		images = append(images, Image{Repo: repo, Tag: tag, Size: size, ID: id})
+	}
+	return images
 }
 
 // splitRepoTag separa "repo:tag" no último ":" que vem depois da última
@@ -71,12 +81,17 @@ func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 	if err != nil {
 		return nil, err
 	}
+	return volumesFromItems(result.Items), nil
+}
 
-	volumes := make([]Volume, 0, len(result.Items))
-	for _, v := range result.Items {
+// volumesFromItems converte volumes da API ([]volume.Volume) em []Volume.
+// Compartilhada por ListVolumes e ListProjectVolumes.
+func volumesFromItems(items []volume.Volume) []Volume {
+	volumes := make([]Volume, 0, len(items))
+	for _, v := range items {
 		volumes = append(volumes, Volume{Driver: v.Driver, Name: v.Name})
 	}
-	return volumes, nil
+	return volumes
 }
 
 // ImageInfo busca o inspect de uma imagem e formata tags, criação,
