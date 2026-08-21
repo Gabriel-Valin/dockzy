@@ -7,19 +7,11 @@ import (
 	"github.com/moby/moby/client"
 )
 
-// Project identifica um projeto docker-compose: o nome
-// (com.docker.compose.project) e a pasta de onde "docker compose up" foi
-// rodado (com.docker.compose.project.working_dir).
 type Project struct {
 	Name       string
 	WorkingDir string
 }
 
-// DetectProject procura, entre os containers existentes (rodando ou não),
-// um que pertença a um projeto docker-compose subido a partir de
-// workingDir. workingDir deve ser um caminho absoluto (ex: os.Getwd()).
-// Devolve ok=false se nenhum bate — não dá pra detectar um projeto que
-// nunca teve "docker compose up" rodado, só pela API do Docker.
 func (c *Client) DetectProject(ctx context.Context, workingDir string) (Project, bool, error) {
 	result, err := c.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
@@ -37,10 +29,6 @@ func (c *Client) DetectProject(ctx context.Context, workingDir string) (Project,
 	}, true, nil
 }
 
-// ListProjectContainers lista os containers de um projeto docker-compose
-// (com.docker.compose.project == project). Todos entram como Service —
-// "standalone" não é um conceito que existe dentro de um projeto: todo
-// container ali tem, por definição, o label com.docker.compose.service.
 func (c *Client) ListProjectContainers(ctx context.Context, project string) ([]Service, error) {
 	result, err := c.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
@@ -61,11 +49,6 @@ func (c *Client) ListProjectContainers(ctx context.Context, project string) ([]S
 	return services, nil
 }
 
-// ListProjectImages lista as imagens usadas pelos containers de um
-// projeto docker-compose. Imagens puxadas de um registry não carregam o
-// label com.docker.compose.project (só containers e volumes carregam) —
-// por isso o filtro aqui é indireto: pega o ImageID de cada container do
-// projeto e casa contra a listagem completa de imagens do host.
 func (c *Client) ListProjectImages(ctx context.Context, project string) ([]Image, error) {
 	containers, err := c.ContainerList(ctx, client.ContainerListOptions{
 		All:     true,
@@ -95,9 +78,6 @@ func (c *Client) ListProjectImages(ctx context.Context, project string) ([]Image
 	return images, nil
 }
 
-// ListProjectVolumes lista os volumes de um projeto docker-compose
-// (com.docker.compose.project == project) — compose marca os volumes
-// nomeados que ele cria com esse label.
 func (c *Client) ListProjectVolumes(ctx context.Context, project string) ([]Volume, error) {
 	result, err := c.VolumeList(ctx, client.VolumeListOptions{
 		Filters: make(client.Filters).Add("label", "com.docker.compose.project="+project),

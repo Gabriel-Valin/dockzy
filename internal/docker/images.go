@@ -11,24 +11,18 @@ import (
 	"github.com/moby/moby/client"
 )
 
-// Image = imagem local. -> cli.ImageList
 type Image struct {
-	Repo string // "bumper", "<none>"
-	Tag  string // "latest", "<none>"
-	Size string // tamanho legível (ex: "125.3MiB")
+	Repo string
+	Tag  string
+	Size string
 	ID   string
 }
 
-// Volume = volume local. -> cli.VolumeList
 type Volume struct {
-	Driver string // "local"
-	Name   string // nome do volume
+	Driver string
+	Name   string
 }
 
-// ListImages lista as imagens locais (imita "docker images"). Uma imagem
-// com várias tags aparece uma vez por tag; uma imagem sem nenhuma
-// RepoTag (comum em imagens intermediárias/dangling) aparece como
-// "<none>:<none>".
 func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 	result, err := c.ImageList(ctx, client.ImageListOptions{All: false})
 	if err != nil {
@@ -42,9 +36,6 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 	return images, nil
 }
 
-// imagesFromSummary converte um [image.Summary] (uma imagem) em uma ou
-// mais [Image] — uma por tag, já que "docker images" mostra uma linha por
-// tag, não por imagem. Compartilhada por ListImages e ListProjectImages.
 func imagesFromSummary(summary image.Summary) []Image {
 	id := strings.TrimPrefix(summary.ID, "sha256:")
 	if len(id) > 12 {
@@ -63,9 +54,6 @@ func imagesFromSummary(summary image.Summary) []Image {
 	return images
 }
 
-// splitRepoTag separa "repo:tag" no último ":" que vem depois da última
-// "/", pra não confundir a porta de um registry (ex: "host:5000/img:tag")
-// com o separador da tag.
 func splitRepoTag(repoTag string) (repo, tag string) {
 	tagIdx := strings.LastIndex(repoTag, ":")
 	slashIdx := strings.LastIndex(repoTag, "/")
@@ -75,7 +63,6 @@ func splitRepoTag(repoTag string) (repo, tag string) {
 	return repoTag[:tagIdx], repoTag[tagIdx+1:]
 }
 
-// ListVolumes lista os volumes locais. -> cli.VolumeList
 func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 	result, err := c.VolumeList(ctx, client.VolumeListOptions{})
 	if err != nil {
@@ -84,8 +71,6 @@ func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 	return volumesFromItems(result.Items), nil
 }
 
-// volumesFromItems converte volumes da API ([]volume.Volume) em []Volume.
-// Compartilhada por ListVolumes e ListProjectVolumes.
 func volumesFromItems(items []volume.Volume) []Volume {
 	volumes := make([]Volume, 0, len(items))
 	for _, v := range items {
@@ -94,9 +79,6 @@ func volumesFromItems(items []volume.Volume) []Volume {
 	return volumes
 }
 
-// ImageInfo busca o inspect de uma imagem e formata tags, criação,
-// tamanho, plataforma e a config (entrypoint/cmd/portas/env) — o
-// equivalente, pra imagens, do que containerConfig faz pra containers.
 func (c *Client) ImageInfo(ctx context.Context, id string) (string, error) {
 	result, err := c.ImageInspect(ctx, id)
 	if err != nil {
@@ -144,9 +126,6 @@ func (c *Client) ImageInfo(ctx context.Context, id string) (string, error) {
 	return b.String(), nil
 }
 
-// VolumeInfo busca o inspect de um volume e formata driver, mountpoint,
-// escopo, labels e opções — o equivalente, pra volumes, do que
-// containerConfig faz pra containers.
 func (c *Client) VolumeInfo(ctx context.Context, name string) (string, error) {
 	result, err := c.VolumeInspect(ctx, name, client.VolumeInspectOptions{})
 	if err != nil {
@@ -181,8 +160,6 @@ func (c *Client) VolumeInfo(ctx context.Context, name string) (string, error) {
 	return b.String(), nil
 }
 
-// sortedKeys devolve as chaves de m em ordem alfabética, pra formatar
-// mapas (labels, opções) de forma determinística.
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {

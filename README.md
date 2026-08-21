@@ -16,16 +16,43 @@
 
 ---
 
-`dockzy` is a single-binary terminal dashboard for Docker: containers, live CPU,
-logs, stats, config and `top`, all in one keyboard-driven screen — no browser,
-no `docker` subcommands to remember.
+## What is dockzy?
+
+If you work with Docker day to day, you know the drill: `docker ps` to see
+what's running, `docker logs -f <id>` to check on it, `docker stats` in
+another tab to see if it's eating your CPU, `docker inspect` when something
+looks off — a handful of commands and container IDs juggled across terminal
+tabs just to answer "what's going on with my containers right now?"
+
+`dockzy` puts all of that in one screen. It's a terminal dashboard that shows
+your containers, images and volumes side by side, with live CPU and resource
+usage updating in place, and a detail panel that gives you logs, stats,
+config and running processes for whatever you have selected — no more typing
+out IDs, no more switching windows. Everything is keyboard-driven: arrow
+keys to move around, `Tab` to jump between panels, and it just works whether
+you're looking at a single container or a whole docker-compose stack.
+
+Point it at a docker-compose project and it automatically scopes the whole
+dashboard to just that stack's containers, images and volumes — or pass
+`-all` to see everything running on the machine.
+
+It's built for people who'd rather glance at a dashboard than remember which
+`docker` subcommand does what.
 
 ## Features
 
 - **Live container list** — services (grouped by `com.docker.compose.service`)
   and standalone containers, split into their own panels.
+- **Docker Compose project scoping** — run dockzy inside a compose project's
+  working directory and it auto-detects the project, scoping the whole
+  dashboard (containers, images, volumes) to just that stack. Pass `-all` to
+  see everything on the host instead.
 - **Live CPU%** — one stats stream per running container, updated in place,
   no polling/refresh needed.
+- **Live per-container stats** — CPU, memory, network and block I/O update in
+  place, once per second, while a container is selected.
+- **Images and volumes panels** — browse local images (grouped by repo/tag)
+  and volumes alongside containers, with inspect-style detail on selection.
 - **Per-container detail tabs** — Logs, Stats, Config and `top`, fetched the
   moment you select a row and cancelled cleanly if you move on before they land.
 - **Full keyboard navigation** — cycle panels with `Tab` / `Shift+Tab`, move
@@ -35,10 +62,9 @@ no `docker` subcommands to remember.
 
 ## Status
 
-Early-stage. Container listing, live CPU, and the Logs/Stats/Config/Top panel
-are wired up to the real Docker daemon. Images and Volumes are still mocked
-(`internal/docker/mock.go`) — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#42-recipe-static-feature-no-stream)
-for the exact recipe to swap them for the real API.
+Early-stage but functional end-to-end against a real Docker daemon: container
+listing, live CPU, images, volumes, docker-compose project scoping, and the
+Logs/Stats/Config/Top panel are all wired up — nothing is mocked.
 
 ## Install & run
 
@@ -51,8 +77,18 @@ cd dockzy
 go run .
 ```
 
+Inside a docker-compose project directory, dockzy automatically scopes to
+that project's containers, images and volumes. Use `-all` to see everything
+on the host instead:
+
+```bash
+go run . -all
+```
+
 No Docker environment handy? `docker-compose.yml` spins up a small
-Postgres/Redis/Nginx stack you can point dockzy at:
+Postgres/Redis/Nginx stack you can point dockzy at (see also
+[`docker-examples/`](docker-examples/) for standalone config samples like
+`nginx.conf`):
 
 ```bash
 docker compose up -d
@@ -67,22 +103,6 @@ go run .
 | `↑` / `↓`           | Move selection within the focused list              |
 | `←` / `→`           | Switch tab (Logs/Stats/Config/Top) when the right panel is focused |
 | `q`                 | Quit (cancels every in-flight stream first)         |
-
-## How it's built
-
-```
-main.go                    entrypoint — calls app.Run()
-internal/
-├── docker/   talks to the Docker daemon (no tview import)
-├── ui/       tview widgets (no Docker client import)
-└── app/      composition root — wires docker + ui, owns every goroutine
-```
-
-`docker` never imports `tview`; `ui` never imports the Docker client — each
-side can be read and reasoned about on its own, and `app` is the only place
-that knows both exist. The full writeup — data flow, the live-CPU stream,
-container selection, and a step-by-step recipe for adding a new panel value —
-lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Contributing
 

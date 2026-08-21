@@ -1,6 +1,3 @@
-// Package docker fala com o daemon do Docker: lista containers e assina o
-// stream de stats pra calcular CPU ao vivo. É a única camada do projeto que
-// conhece a API do Docker — main/app e ui não importam client diretamente.
 package docker
 
 import (
@@ -10,15 +7,13 @@ import (
 	"github.com/moby/moby/client"
 )
 
-// Service = container gerenciado por docker-compose (tem nome de serviço).
 type Service struct {
-	State string // "running", "exited" etc. -> Container.State
-	Name  string // nome do serviço            -> label com.docker.compose.service
-	CPU   string // "0.03%"                     -> stream de stats (calculado)
-	ID    string // usado depois pra logs/stats -> Container.ID
+	State string
+	Name  string
+	CPU   string
+	ID    string
 }
 
-// Standalone = container avulso (não faz parte de um compose).
 type Standalone struct {
 	State string
 	Name  string
@@ -26,14 +21,10 @@ type Standalone struct {
 	ID    string
 }
 
-// Client é um client do Docker (github.com/moby/moby/client) com os
-// métodos usados pelo dockzy.
 type Client struct {
 	*client.Client
 }
 
-// New abre uma conexão com o Docker usando as variáveis de ambiente padrão
-// (DOCKER_HOST, DOCKER_CERT_PATH etc.).
 func New() (*Client, error) {
 	cli, err := client.New(client.FromEnv)
 	if err != nil {
@@ -42,9 +33,6 @@ func New() (*Client, error) {
 	return &Client{cli}, nil
 }
 
-// ListContainers lista todos os containers (rodando ou não) e os separa em
-// Services (têm o label do compose) e Standalone (containers avulsos). CPU
-// começa em "0.00%" pra cada um e é atualizado depois via StreamCPU.
 func (c *Client) ListContainers(ctx context.Context) (services []Service, standalone []Standalone, err error) {
 	result, err := c.ContainerList(ctx, client.ContainerListOptions{All: true})
 	if err != nil {

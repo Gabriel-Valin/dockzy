@@ -10,8 +10,6 @@ import (
 	"github.com/moby/moby/client"
 )
 
-// ContainerInfo reúne o que o painel direito (Logs, Stats, Container
-// Config, Top) precisa mostrar sobre um container específico.
 type ContainerInfo struct {
 	Logs   string
 	Stats  string
@@ -19,9 +17,6 @@ type ContainerInfo struct {
 	Top    string
 }
 
-// Info busca logs, stats, inspect e top de um container e monta o texto de
-// cada aba. As quatro chamadas rodam em paralelo pra reduzir a latência
-// percebida ao trocar de container selecionado.
 func (c *Client) Info(ctx context.Context, id string) (ContainerInfo, error) {
 	type result struct {
 		field string
@@ -70,7 +65,6 @@ func (c *Client) Info(ctx context.Context, id string) (ContainerInfo, error) {
 	return info, nil
 }
 
-// containerLogs busca as últimas linhas de stdout/stderr do container.
 func (c *Client) containerLogs(ctx context.Context, id string) (string, error) {
 	result, err := c.ContainerLogs(ctx, id, client.ContainerLogsOptions{
 		ShowStdout: true,
@@ -92,8 +86,6 @@ func (c *Client) containerLogs(ctx context.Context, id string) (string, error) {
 	return out.String(), nil
 }
 
-// containerStatsSnapshot pega uma amostra única de stats (com uma amostra
-// anterior pro cálculo de delta de CPU) e formata como no "docker stats".
 func (c *Client) containerStatsSnapshot(ctx context.Context, id string) (string, error) {
 	result, err := c.ContainerStats(ctx, id, client.ContainerStatsOptions{
 		Stream:                false,
@@ -112,8 +104,6 @@ func (c *Client) containerStatsSnapshot(ctx context.Context, id string) (string,
 	return formatStatsText(stats), nil
 }
 
-// containerConfig busca o inspect do container e formata imagem, comando,
-// portas publicadas e variáveis de ambiente.
 func (c *Client) containerConfig(ctx context.Context, id string) (string, error) {
 	result, err := c.ContainerInspect(ctx, id, client.ContainerInspectOptions{})
 	if err != nil {
@@ -147,7 +137,6 @@ func (c *Client) containerConfig(ctx context.Context, id string) (string, error)
 	return b.String(), nil
 }
 
-// containerTop lista os processos rodando dentro do container.
 func (c *Client) containerTop(ctx context.Context, id string) (string, error) {
 	result, err := c.ContainerTop(ctx, id, client.ContainerTopOptions{})
 	if err != nil {
@@ -164,8 +153,6 @@ func (c *Client) containerTop(ctx context.Context, id string) (string, error) {
 	return b.String(), nil
 }
 
-// formatBytes converte bytes pra uma unidade legível (kB/MB/GB), no mesmo
-// espírito do "docker stats".
 func formatBytes(n uint64) string {
 	const unit = 1024
 	if n < unit {
