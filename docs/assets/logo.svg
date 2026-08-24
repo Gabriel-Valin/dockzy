@@ -72,5 +72,5 @@
         font-size="56" font-weight="700" fill="#e6edf3">dockzy</text>
   <text x="256" y="464" text-anchor="middle"
         font-family="'SF Mono','Menlo','Courier New',monospace"
-        font-size="18" fill="#3fb950">$ dockzy --watch</text>
+        font-size="18" fill="#3fb950">$ dockzy --all</text>
 </svg>
