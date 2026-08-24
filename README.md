@@ -14,6 +14,10 @@
   <img alt="TUI" src="https://img.shields.io/badge/UI-tview%20%2F%20tcell-3fb950">
 </p>
 
+<p align="center">
+  <img alt="dockzy-gif" src="docs/assets/gif-dockzy.gif">
+</p>
+
 ---
 
 ## What is dockzy?
