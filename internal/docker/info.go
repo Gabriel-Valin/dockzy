@@ -81,7 +81,7 @@ func (c *Client) containerLogs(ctx context.Context, id string) (string, error) {
 		return "", err
 	}
 	if out.Len() == 0 {
-		return "(sem logs)", nil
+		return "(no logs...)", nil
 	}
 	return out.String(), nil
 }
