@@ -53,7 +53,10 @@ All wiring lives in `app.Run` — that is the only place that knows about both.
 `docs/ARCHITECTURE.md` documents the exact shape a new feature is expected to
 take, static and streamed. Read it before adding one.
 
-## Conventions
+## Architecure
+- Check @ARCHITECTURE.md
+
+## Explicit Conventions 
 
 - Go standard formatting (`gofmt`) — no custom style config.
 - **Comments, log messages and user-facing strings are in pt-BR**; identifiers,
