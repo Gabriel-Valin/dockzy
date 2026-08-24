@@ -121,25 +121,21 @@ func New(data Data, onQuit func()) *Dashboard {
 
 	servicesBox.SetFocusFunc(func() {
 		servicesBox.SetBorderColor(colorFocused)
-		selectServices()
 	})
 	servicesBox.SetBlurFunc(func() { servicesBox.SetBorderColor(colorUnfocused) })
 
 	standaloneBox.SetFocusFunc(func() {
 		standaloneBox.SetBorderColor(colorFocused)
-		selectStandalone()
 	})
 	standaloneBox.SetBlurFunc(func() { standaloneBox.SetBorderColor(colorUnfocused) })
 
 	imagesBox.SetFocusFunc(func() {
 		imagesBox.SetBorderColor(colorFocused)
-		selectImages()
 	})
 	imagesBox.SetBlurFunc(func() { imagesBox.SetBorderColor(colorUnfocused) })
 
 	volumesBox.SetFocusFunc(func() {
 		volumesBox.SetBorderColor(colorFocused)
-		selectVolumes()
 	})
 	volumesBox.SetBlurFunc(func() { volumesBox.SetBorderColor(colorUnfocused) })
 
@@ -151,7 +147,7 @@ func New(data Data, onQuit func()) *Dashboard {
 			d.focusIdx = (d.focusIdx + 1) % len(d.focusables)
 			app.SetFocus(d.focusables[d.focusIdx])
 			return nil
-		case tcell.KeyBacktab: // Shift+Tab
+		case tcell.KeyBacktab:
 			d.focusIdx = (d.focusIdx - 1 + len(d.focusables)) % len(d.focusables)
 			app.SetFocus(d.focusables[d.focusIdx])
 			return nil
