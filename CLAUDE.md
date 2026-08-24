@@ -1,35 +1,77 @@
 ## What this is
 
-`dockzy` (module `github.com/Gabriel-Valin/dockzy`) is an early-stage terminal UI for managing Docker, in the style of `lazydocker`. It's built with `tview`/`tcell` and is meant to eventually talk to the Docker daemon via `github.com/docker/go-sdk` / `github.com/moby/moby/client`.
+`dockzy` (module `github.com/Gabriel-Valin/dockzy`) is a terminal UI for managing
+Docker, in the style of `lazydocker`. Built with `tview`/`tcell`, talking to the
+Docker daemon through `github.com/moby/moby/client`.
 
-The project is a single `main` package at the repo root — there is no internal package structure yet.
-
-## Current state (important context)
-
-- `main.go` is a **fully mocked UI**: `getMockData()` returns hardcoded `Service`/`Standalone`/`Image`/`Volume` data and static log/stats/config/top text. Nothing in `main.go` talks to Docker yet. Struct field comments (e.g. `// -> Container.State`) indicate which real Docker API call/field should eventually populate that field.
-- No tests, no README, no linter config, no CI exist yet.
+It is functional end-to-end against a real daemon — container/image/volume
+listing, live CPU, docker-compose project scoping, and the Logs/Stats/Config/Top
+detail panel. Nothing is mocked.
 
 ## Commands
 
 ```bash
-go build ./...     # note: currently fails because of 1.go (see above)
-go run .            # run the TUI (only works once 1.go's build error is resolved)
+go build ./...   # build
+go run .         # run the TUI (scoped to the compose project in the cwd, if any)
+go run . -all    # run against every container/image/volume on the host
 go vet ./...
+gofmt -l .       # should print nothing
 ```
 
-There is no test suite (`go test ./...` has nothing to run).
+There is no test suite yet (`go test ./...` has nothing to run).
 
-## Architecture (main.go)
+`docker-compose.yml` at the root spins up a small Postgres/Redis/Nginx stack to
+point dockzy at during development.
 
-- **Data model**: `Service`, `Standalone`, `Image`, `Volume`, bundled in `mockData` (currently populated by `getMockData()`, intended to be replaced by real Docker API calls).
-- **Left panel**: five stacked `tview.List`/`tview.TextView` boxes — Status, Services, Standalone Containers, Images, Volumes — built by `buildStatusBox`, `buildServicesBox`, `buildStandaloneBox`, `buildImagesBox`, `buildVolumesBox`. Row text is manually column-aligned via `formatRow`/`padRight`.
-- **Right panel**: `tabbedPanel` (logs/stats/config/top) implemented with `tview.Pages` plus a manually-rendered tab header (`renderHeader`); `next()`/`prev()` switch pages and re-render the header.
-- **Focus handling**: `main()` builds a `focusables` slice (the four left-panel lists + the tab panel) and cycles through it on Tab/Shift+Tab; when the tab panel is focused, Left/Right arrow keys call `tabs.prev()`/`tabs.next()` instead of navigating a list. Focused boxes get a green border via `SetFocusFunc`/`SetBlurFunc` (`applyFocusBorder`).
-- `q` quits the app.
+## Project structure
 
-When wiring up real Docker data (per the comments in `main.go` and the prototype in `1.go`), the pattern to follow is: build a `docker/go-sdk` (or `moby/moby/client`) client once in `main()`, replace `getMockData()`'s static values with live API calls, and reuse the `tviewWriter`/goroutine + `context.CancelFunc` pattern from `1.go` for streaming logs into a `TextView` without blocking the UI goroutine (`app.QueueUpdateDraw`).
+```
+main.go                 entrypoint — parses -all, calls app.Run()
+internal/
+├── docker/             Docker daemon access. Never imports tview.
+│   ├── docker.go         Client (embeds moby client), Service, Standalone, ListContainers
+│   ├── compose.go        Project detection + project-scoped listing (compose labels)
+│   ├── images.go         Image/Volume types, ListImages/ListVolumes, ImageInfo/VolumeInfo
+│   ├── info.go           ContainerInfo (logs/stats/config/top), fetched in parallel
+│   └── stats.go          CPUUpdate/StatsUpdate, StreamCPU/StreamStats, formatters
+├── ui/                  tview widgets. Never imports the moby client.
+│   ├── data.go           Data — the struct the dashboard is built from
+│   ├── dashboard.go      Dashboard: layout, focus cycling, key handling, live updates
+│   ├── panel.go          Left-panel box builders + row formatting (formatRow/padRight)
+│   ├── detail.go         Right panel: container tabs vs. single-view resource page
+│   ├── tabs.go           tabbedPanel — Logs/Stats/Config/Top pages + rendered header
+│   └── theme.go          Focus border colors
+└── app/app.go          Wiring: builds the client, loads data, connects UI callbacks to streams
+docs/                   ARCHITECTURE.md (how to add a feature), ROADMAP.md, GOLANG-ROADMAP.md
+docker-examples/        Config samples used by docker-compose.yml
+```
+
+**Dependency direction**: `app` → `ui` + `docker`. `ui` and `docker` never
+import each other's concerns (`ui` imports `docker` only for its data types).
+All wiring lives in `app.Run` — that is the only place that knows about both.
+
+`docs/ARCHITECTURE.md` documents the exact shape a new feature is expected to
+take, static and streamed. Read it before adding one.
 
 ## Conventions
 
-- UI-facing struct/type doc comments and code comments are written in **pt-BR**; keep that convention when extending mocked/UI code.
-- Go standard formatting (`gofmt`) — no custom style config present.
+- Go standard formatting (`gofmt`) — no custom style config.
+- **Comments, log messages and user-facing strings are in pt-BR**; identifiers,
+  file names and commit messages in English.
+- The codebase is deliberately comment-light — prefer clear names over comments.
+- `docker.Client` embeds `*client.Client`, so moby methods are called directly on
+  it (`c.ContainerList(...)`). Wrapper methods return dockzy's own types, never
+  moby types, so the `ui` package stays free of Docker API types.
+- **Streamed values** follow the CPU pattern: a `docker.Stream*` method pushes
+  typed updates onto a channel, `app.Run` reads that channel and calls a
+  `Dashboard.Update*` method, which wraps the mutation in `App.QueueUpdateDraw`.
+  Anything touching a tview widget from a goroutine must go through
+  `QueueUpdateDraw`.
+- **Selection cancels the previous selection.** `app.Run` keeps one
+  `context.CancelFunc` for the active selection; every new one cancels the last
+  so no stale logs/stats land after the user has moved on. Check `ctx.Err()`
+  after any await before writing to the UI.
+- Left-panel rows are manually column-aligned (`formatRow`, `padRight`), not
+  table-driven — keep widths consistent when adding a column.
+- Don't commit build artifacts. (A stray `verify` binary is currently tracked
+  and there is no `.gitignore`.)
