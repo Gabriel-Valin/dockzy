@@ -95,14 +95,38 @@ docker compose up -d
 go run .
 ```
 
+## Using dockzy
+
+The left panel stacks five boxes — Status, Services, Standalone Containers,
+Images, Volumes. The right panel shows detail for whatever row is currently
+selected on the left, as four tabs: Logs, Stats, Container Config and `Top`.
+
+- On launch, the first service (or the first standalone container, if there
+  are no services) is auto-selected and its detail starts loading.
+- Moving the selection in Services/Standalone/Images/Volumes immediately
+  refreshes the right panel — logs/config/top are fetched once, stats and CPU
+  stream continuously while a container stays selected.
+- `Tab` / `Shift+Tab` cycles focus across the five panels; the focused box
+  gets a green border.
+- With the right panel focused, `←`/`→` switch between the Logs/Stats/Config/Top
+  tabs, and `↑`/`↓`/`Page Up`/`Page Down`/`Home`/`End` scroll that tab's
+  content instead of moving a selection.
+- Switching selection while a fetch is still in flight cancels it — no
+  stale logs/stats land after you've already moved on.
+
 ## Keybindings
 
-| Key                | Action                                            |
-| ------------------ | -------------------------------------------------- |
-| `Tab` / `Shift+Tab` | Cycle focus: Services → Standalone → Images → Volumes → right panel |
-| `↑` / `↓`           | Move selection within the focused list              |
-| `←` / `→`           | Switch tab (Logs/Stats/Config/Top) when the right panel is focused |
-| `q`                 | Quit (cancels every in-flight stream first)         |
+| Key                                 | Action                                                                     |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| `Tab` / `Shift+Tab`                  | Cycle focus: Services → Standalone → Images → Volumes → right panel        |
+| `↑` / `↓`                             | Move selection within the focused list (Services/Standalone/Images/Volumes) |
+| `↑` / `↓` (right panel focused)      | Scroll the active tab's content up/down                                    |
+| `←` / `→`                             | Switch tab (Logs/Stats/Config/Top) when the right panel is focused         |
+| `Page Up` / `Page Down`              | Scroll the active tab's content a page at a time (right panel focused)     |
+| `Home` / `End`                       | Jump to the top/bottom of the active tab's content (right panel focused)   |
+| Mouse click                          | Focus a panel and select the clicked row                                   |
+| Mouse wheel                          | Scroll the list or tab content under the cursor                            |
+| `q`                                   | Quit (cancels every in-flight stream first)                                |
 
 ## Contributing
 
