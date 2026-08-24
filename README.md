@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img alt="dockzy-gif" src="docs/assets/gif-dockzy.gif">
+  <img alt="dockzy-gif" src="docs/assets/dockzy.gif">
 </p>
 
 ---
