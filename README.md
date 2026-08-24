@@ -66,6 +66,12 @@ Early-stage but functional end-to-end against a real Docker daemon: container
 listing, live CPU, images, volumes, docker-compose project scoping, and the
 Logs/Stats/Config/Top panel are all wired up — nothing is mocked.
 
+## Planned features
+
+- **Container actions** — Restart/Stop/Down when a container is selected.
+- **Compose stack control** — Up/Down a docker-compose stack from inside the project view.
+- **Real-time charts** — CPU/Memory usage visualization as time-series charts.
+
 ## Install & run
 
 Requires Go 1.26+ and a reachable Docker daemon (`DOCKER_HOST` or the default
