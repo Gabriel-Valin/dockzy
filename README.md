@@ -77,6 +77,31 @@ Logs/Stats/Config/Top panel are all wired up — nothing is mocked.
 Requires Go 1.26+ and a reachable Docker daemon (`DOCKER_HOST` or the default
 socket).
 
+### Install the `dockzy` binary
+
+```bash
+go install github.com/Gabriel-Valin/dockzy@latest
+```
+
+This drops a `dockzy` binary into `$(go env GOPATH)/bin` (`~/go/bin` by
+default). If that folder isn't already on your `PATH`, add it — for `zsh`:
+
+```bash
+echo 'export PATH="$PATH:$HOME/go/bin"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+(`bash` users: same line, in `~/.bashrc` instead.)
+
+Once it's on your `PATH`, run it from any project directory:
+
+```bash
+dockzy        # scoped to the docker-compose project in the cwd, if any
+dockzy -all   # everything on the host, ignoring compose scoping
+```
+
+### Run from source (for development/contributing)
+
 ```bash
 git clone https://github.com/Gabriel-Valin/dockzy.git
 cd dockzy
